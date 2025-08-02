@@ -65,7 +65,7 @@
 
     let data;
 
-    d3.csv("cleaned_excess_deaths_full_columns.csv", d3.autoType).then(d => {
+    d3.csv("cleaned_excess_deaths.csv", d3.autoType).then(d => {
       data = d;
       setScene(0);
     });
