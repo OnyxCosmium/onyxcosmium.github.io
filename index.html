@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COVID-19 Excess Deaths Narrative Visualization</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/d3-annotation@2.5.1/dist/d3-annotation.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Excess Deaths During the COVID-19 Pandemic</h1>
+
+  <div id="scene-container"></div>
+  <div id="exploration-container" style="display: none;">
+    <h2>Explore the Data</h2>
+    <div id="exploration-chart"></div>
+  </div>
+
+  <div id="nav-buttons">
+    <button id="prev">Previous</button>
+    <button id="next">Next</button>
+  </div>
+
+  <script>
+    const scenes = [
+      scene1,
+      scene2,
+      scene3
+    ];
+    let currentScene = 0;
+
+    function showScene(index) {
+      d3.select("#scene-container").html("");
+      d3.select("#exploration-container").style("display", index === scenes.length ? "block" : "none");
+      if (index < scenes.length) scenes[index]();
+    }
+
+    document.getElementById("prev").addEventListener("click", () => {
+      if (currentScene > 0) {
+        currentScene--;
+        showScene(currentScene);
+      }
+    });
+
+    document.getElementById("next").addEventListener("click", () => {
+      if (currentScene < scenes.length) {
+        currentScene++;
+        showScene(currentScene);
+      }
+    });
+
+    // Load data and initialize
+    let covidData;
+    d3.csv("cleaned_excess_deaths.csv").then(data => {
+      covidData = data;
+      showScene(currentScene);
+    });
+
+    // Scene 1
+    function scene1() {
+      const svg = d3.select("#scene-container")
+        .append("svg")
+        .attr("width", 800)
+        .attr("height", 500);
+
+      svg.append("text")
+        .attr("x", 400)
+        .attr("y", 50)
+        .attr("text-anchor", "middle")
+        .text("Global Overview of Excess Deaths per 100,000 People")
+        .style("font-size", "18px");
+
+      const countries = covidData.filter(d => d.Code === "OWID_WRL");
+
+      const x = d3.scaleTime()
+        .domain(d3.extent(countries, d => new Date(d.Date)))
+        .range([80, 750]);
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(countries, d => +d["Cumulative excess deaths per 100,000 people"])])
+        .range([400, 100]);
+
+      const line = d3.line()
+        .x(d => x(new Date(d.Date)))
+        .y(d => y(+d["Cumulative excess deaths per 100,000 people"]));
+
+      svg.append("path")
+        .datum(countries)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 2)
+        .attr("d", line);
+
+      svg.append("g")
+        .attr("transform", "translate(0,400)")
+        .call(d3.axisBottom(x));
+
+      svg.append("g")
+        .attr("transform", "translate(80,0)")
+        .call(d3.axisLeft(y));
+
+      svg.append("text")
+        .attr("x", 400)
+        .attr("y", 450)
+        .attr("text-anchor", "middle")
+        .text("Date");
+
+      svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -250)
+        .attr("y", 30)
+        .attr("text-anchor", "middle")
+        .text("Cumulative Excess Deaths per 100,000");
+    }
+
+    // Scene 2
+    function scene2() {
+      const svg = d3.select("#scene-container")
+        .append("svg")
+        .attr("width", 800)
+        .attr("height", 500);
+
+      svg.append("text")
+        .attr("x", 400)
+        .attr("y", 50)
+        .attr("text-anchor", "middle")
+        .text("Selected Countries: Peak Excess Death Rates")
+        .style("font-size", "18px");
+
+      const selected = covidData.filter(d => ["USA", "BRA", "IND", "RUS", "ZAF"].includes(d.Code));
+      const latest = d3.group(selected, d => d.Code);
+      const bars = Array.from(latest, ([code, values]) => {
+        const latestDate = d3.max(values, d => d.Date);
+        const latestData = values.find(d => d.Date === latestDate);
+        return { code, value: +latestData["Cumulative excess deaths per 100,000 people"] };
+      });
+
+      const x = d3.scaleBand()
+        .domain(bars.map(d => d.code))
+        .range([100, 700])
+        .padding(0.2);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(bars, d => d.value)])
+        .range([400, 100]);
+
+      svg.selectAll("rect")
+        .data(bars)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.code))
+        .attr("y", d => y(d.value))
+        .attr("width", x.bandwidth())
+        .attr("height", d => 400 - y(d.value))
+        .attr("fill", "orange");
+
+      svg.append("g")
+        .attr("transform", "translate(0,400)")
+        .call(d3.axisBottom(x));
+
+      svg.append("g")
+        .attr("transform", "translate(100,0)")
+        .call(d3.axisLeft(y));
+    }
+
+    // Scene 3
+    function scene3() {
+      const svg = d3.select("#scene-container")
+        .append("svg")
+        .attr("width", 800)
+        .attr("height", 500);
+
+      svg.append("text")
+        .attr("x", 400)
+        .attr("y", 50)
+        .attr("text-anchor", "middle")
+        .text("Time Series Comparison: USA vs Brazil vs India")
+        .style("font-size", "18px");
+
+      const countries = ["USA", "BRA", "IND"];
+      const filtered = covidData.filter(d => countries.includes(d.Code));
+
+      const nested = d3.group(filtered, d => d.Code);
+      const x = d3.scaleTime()
+        .domain(d3.extent(filtered, d => new Date(d.Date)))
+        .range([80, 750]);
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(filtered, d => +d["Cumulative excess deaths per 100,000 people"])])
+        .range([400, 100]);
+
+      const line = d3.line()
+        .x(d => x(new Date(d.Date)))
+        .y(d => y(+d["Cumulative excess deaths per 100,000 people"]));
+
+      const colors = d3.scaleOrdinal()
+        .domain(countries)
+        .range(["red", "green", "blue"]);
+
+      for (const [code, values] of nested) {
+        svg.append("path")
+          .datum(values)
+          .attr("fill", "none")
+          .attr("stroke", colors(code))
+          .attr("stroke-width", 2)
+          .attr("d", line);
+      }
+
+      svg.append("g")
+        .attr("transform", "translate(0,400)")
+        .call(d3.axisBottom(x));
+
+      svg.append("g")
+        .attr("transform", "translate(80,0)")
+        .call(d3.axisLeft(y));
+    }
+  </script>
+</body>
+</html>
