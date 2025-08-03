@@ -1,4 +1,4 @@
-Entity,Day,"Cumulative excess deaths per 100,000 people (central estimate)","Cumulative excess deaths per 100,000 people (95% CI, lower bound)","Cumulative excess deaths per 100,000 people (95% CI, upper bound)","Total confirmed deaths due to COVID-19 per 100,000 people"
+location,date,excess_mortality,ci_lower,ci_upper,confirmed_deaths
 Lithuania,2024-06-17,1096.093,1087.0033,1098.8855,348.11664
 Russia,2024-06-17,1015.9762,820.86694,1283.3141,276.8735
 Bulgaria,2024-06-17,965.4326,953.0623,976.2477,566.83325

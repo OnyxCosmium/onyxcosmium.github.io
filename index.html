@@ -3,68 +3,112 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>COVID Excess Deaths Narrative</title>
+  <title>COVID-19 Excess Deaths - Martini Glass Narrative</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 40px;
+      margin: 0;
+      background: #f8f8f8;
+      color: #333;
+    }
+    .container {
+      padding: 40px;
+      max-width: 900px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+    }
+    .scene {
+      margin: 60px 0;
     }
     .chart {
-      margin-bottom: 50px;
+      margin-top: 20px;
+    }
+    .button-container {
+      text-align: center;
+      margin-top: 30px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
     }
     svg {
       width: 100%;
       height: 400px;
+      background-color: white;
+      border: 1px solid #ccc;
+    }
+    .axis-label {
+      font-size: 12px;
+      fill: #555;
     }
   </style>
 </head>
 <body>
-  <h1>Excess Deaths During COVID-19</h1>
+  <div class="container">
+    <h1>Excess Mortality During COVID-19</h1>
+    <div id="scene-1" class="scene">
+      <h2>Scene 1: Global Trend in Excess Deaths</h2>
+      <p>This chart shows the global median of excess deaths per 100,000 people over time.</p>
+      <div class="chart" id="chart1"></div>
+    </div>
 
-  <div class="chart" id="chart1">
-    <h2>Global Median Excess Deaths per 100k</h2>
-    <svg></svg>
-  </div>
+    <div id="scene-2" class="scene" style="display:none;">
+      <h2>Scene 2: Country Spotlight - United States</h2>
+      <p>Here we highlight the trajectory of excess mortality in the U.S.</p>
+      <div class="chart" id="chart2"></div>
+    </div>
 
-  <div class="chart" id="chart2">
-    <h2>United States: Excess Deaths per 100k</h2>
-    <svg></svg>
-  </div>
+    <div id="scene-3" class="scene" style="display:none;">
+      <h2>Scene 3: Compare Countries</h2>
+      <p>Select a country to explore its excess death trends.</p>
+      <select id="countrySelect"></select>
+      <div class="chart" id="chart3"></div>
+    </div>
 
-  <div class="chart" id="chart3">
-    <h2>Select a Country</h2>
-    <select id="countrySelect"></select>
-    <svg></svg>
+    <div class="button-container">
+      <button id="nextBtn">Next</button>
+    </div>
   </div>
 
   <script>
+    let sceneIndex = 1;
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      sceneIndex++;
+      if (sceneIndex <= 3) {
+        document.getElementById(`scene-${sceneIndex - 1}`).style.display = "none";
+        document.getElementById(`scene-${sceneIndex}`).style.display = "block";
+      }
+    });
+
     d3.csv("cleaned_excess_deaths.csv").then(data => {
+      console.log("Loaded data:", data);
       data.forEach(d => {
         d.date = new Date(d.date);
+        d.excess_deaths = +d.excess_deaths;
         d.excess_mortality = +d.excess_mortality;
       });
 
-      const parseDate = d3.timeParse("%Y-%m-%d");
-      data.forEach(d => {
-        d.date = parseDate(d.date);
-      });
+      // SCENE 1: Global Median Excess Mortality
+      const scatterData = data
+        .filter(d => !isNaN(d.excess_mortality) && !isNaN(d.confirmed_deaths))
+        .map(d => ({
+          x: +d.excess_mortality,
+          y: +d.confirmed_deaths,
+          location: d.location,
+          date: d.date
+        }));
+      drawScatterPlot(scatterData, "chart1", "Excess Mortality vs Confirmed Deaths");
 
-      // Scene 1: Global Median Excess Mortality
-      const nestedByDate = d3.rollup(
-        data,
-        v => d3.median(v, d => d.excess_mortality),
-        d => d.date
-      );
-      const globalData = Array.from(nestedByDate, ([date, value]) => ({ date, value }));
-      drawLineChart(globalData, "chart1", "Global Median Excess Deaths per 100k");
+      // SCENE 2: US Spotlight
+      const usData = data.filter(d => d.location === "United States");
+      const usTimeSeries = usData.map(d => ({ date: d.date, value: d.excess_mortality }));
+      drawLineChart(usTimeSeries, "chart2", "United States: Excess Deaths per 100k");
 
-      // Scene 2: United States
-      const usData = data.filter(d => d.location === "United States")
-                         .map(d => ({ date: d.date, value: d.excess_mortality }));
-      drawLineChart(usData, "chart2", "United States: Excess Deaths per 100k");
-
-      // Scene 3: Dropdown Country Selection
+      // SCENE 3: Select Country
       const countries = Array.from(new Set(data.map(d => d.location))).sort();
       const select = d3.select("#countrySelect");
       select.selectAll("option")
@@ -76,45 +120,117 @@
       select.on("change", function() {
         const selected = this.value;
         const countryData = data.filter(d => d.location === selected)
-                                 .map(d => ({ date: d.date, value: d.excess_mortality }));
+                                .map(d => ({ date: d.date, value: d.excess_mortality }));
         drawLineChart(countryData, "chart3", `${selected}: Excess Deaths per 100k`);
       });
     });
 
-    function drawLineChart(data, containerId, label) {
-      const svg = d3.select(`#${containerId} svg`);
-      svg.selectAll("*").remove();
+    function drawLineChart(data, containerId, title) {
+      d3.select(`#${containerId}`).selectAll("svg").remove();
 
-      const width = svg.node().clientWidth;
-      const height = svg.node().clientHeight;
-      const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+      const margin = { top: 30, right: 30, bottom: 50, left: 60 },
+            width = 800 - margin.left - margin.right,
+            height = 400 - margin.top - margin.bottom;
+
+      const svg = d3.select(`#${containerId}`)
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
       const x = d3.scaleTime()
-                  .domain(d3.extent(data, d => d.date))
-                  .range([margin.left, width - margin.right]);
+        .domain(d3.extent(data, d => d.date))
+        .range([0, width]);
+
+      svg.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x));
 
       const y = d3.scaleLinear()
-                  .domain([0, d3.max(data, d => d.value)]).nice()
-                  .range([height - margin.bottom, margin.top]);
-
-      const line = d3.line()
-                     .x(d => x(d.date))
-                     .y(d => y(d.value));
+        .domain([0, d3.max(data, d => d.value)])
+        .range([height, 0]);
 
       svg.append("g")
-         .attr("transform", `translate(0,${height - margin.bottom})`)
-         .call(d3.axisBottom(x));
-
-      svg.append("g")
-         .attr("transform", `translate(${margin.left},0)`)
-         .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y));
 
       svg.append("path")
-         .datum(data)
-         .attr("fill", "none")
-         .attr("stroke", "steelblue")
-         .attr("stroke-width", 1.5)
-         .attr("d", line);
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 2)
+        .attr("d", d3.line()
+          .x(d => x(d.date))
+          .y(d => y(d.value)));
+
+      svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", -10)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .text(title);
+    }
+
+    function drawScatterPlot(data, containerId, title) {
+      d3.select(`#${containerId}`).selectAll("svg").remove();
+
+      const margin = { top: 30, right: 30, bottom: 50, left: 60 },
+            width = 800 - margin.left - margin.right,
+            height = 400 - margin.top - margin.bottom;
+
+      const svg = d3.select(`#${containerId}`)
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleLinear()
+        .domain(d3.extent(data, d => d.x))
+        .nice()
+        .range([0, width]);
+
+      const y = d3.scaleLinear()
+        .domain(d3.extent(data, d => d.y))
+        .nice()
+        .range([height, 0]);
+
+      svg.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x));
+      svg.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height + 40)
+        .attr("text-anchor", "middle")
+        .text("Excess Mortality per 100k");
+
+      svg.append("g")
+        .call(d3.axisLeft(y));
+      svg.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .text("Confirmed Deaths per 100k");
+
+      svg.selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", d => x(d.x))
+        .attr("cy", d => y(d.y))
+        .attr("r", 4)
+        .attr("fill", "steelblue")
+        .attr("opacity", 0.6);
+
+      svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", -10)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .text(title);
     }
   </script>
 </body>
