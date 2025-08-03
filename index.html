@@ -125,25 +125,48 @@
       });
 
       // SCENE 3: Select Country
-      const countries = Array.from(new Set(data.map(d => d.location))).sort();
-      const select = d3.select("#countrySelect");
-      select.selectAll("option")
-        .data(countries)
-        .enter()
-        .append("option")
-        .text(d => d);
+      d3.csv("excess_deaths_data.csv", d3.autoType).then(fullData => {
+        // Clean to first entry per month per country
+        const grouped = d3.group(fullData, d => d.location);
+        const cleanedScene3 = [];
 
-      select.on("change", function () {
-        const selected = this.value;
-        const countryData = data
-          .filter(d => d.location === selected)
-          .map(d => ({
-            date: new Date(d.date),
-            excess_mortality: +d.excess_mortality,
-            confirmed_deaths: +d.confirmed_deaths
-          }));
+        grouped.forEach((entries, country) => {
+          const byMonth = d3.group(entries, d => `${d.date.getFullYear()}-${d.date.getMonth()}`);
+          byMonth.forEach((records) => {
+            // Take the first entry for each month
+            const sorted = records.sort((a, b) => a.date - b.date);
+            cleanedScene3.push(sorted[0]);
+          });
+        });
 
-        drawDualLineChart(countryData, "chart3", `${selected}: Excess vs Confirmed Deaths Over Time`);
+        // Populate country dropdown
+        const countryList = Array.from(new Set(cleanedScene3.map(d => d.location))).sort();
+        const countrySelect = d3.select("#countrySelect");
+
+        countrySelect
+          .selectAll("option")
+          .data(countryList)
+          .enter()
+          .append("option")
+          .attr("value", d => d)
+          .text(d => d);
+
+        countrySelect.on("change", function () {
+          const selected = this.value;
+          const countryData = cleanedScene3
+            .filter(d => d.location === selected)
+            .map(d => ({
+              date: new Date(d.date),
+              excess_mortality: +d.excess_mortality,
+              confirmed_deaths: +d.confirmed_deaths
+            }));
+
+          drawDualLineChart(countryData, "chart3", `${selected}: Excess vs Confirmed Deaths Over Time`);
+        });
+
+        // Trigger initial graph
+        const defaultCountry = "United States";
+        countrySelect.property("value", defaultCountry).dispatch("change");
       });
     });
 
