@@ -61,7 +61,10 @@
 
     <div id="scene-2" class="scene" style="display:none;">
       <h2>Scene 2: Country Spotlight - United States</h2>
-      <p>Here we highlight the trajectory of excess mortality in the U.S.</p>
+      <p>Here we highlight the trajectory of excess mortality in the U.S compared to
+         it's confirmed deaths. We can see that as time progresses and more COVID deaths
+         are confirmed, the disparity between the excess deaths grows wider. This shows
+         that COVID </p>
       <div class="chart" id="chart2"></div>
     </div>
 
@@ -130,11 +133,17 @@
         .append("option")
         .text(d => d);
 
-      select.on("change", function() {
+      select.on("change", function () {
         const selected = this.value;
-        const countryData = data.filter(d => d.location === selected)
-                                .map(d => ({ date: d.date, value: d.excess_mortality }));
-        drawLineChart(countryData, "chart3", `${selected}: Excess Deaths per 100k`);
+        const countryData = data
+          .filter(d => d.location === selected)
+          .map(d => ({
+            date: new Date(d.date),
+            excess_mortality: +d.excess_mortality,
+            confirmed_deaths: +d.confirmed_deaths
+          }));
+
+        drawDualLineChart(countryData, "chart3", `${selected}: Excess vs Confirmed Deaths Over Time`);
       });
     });
 
