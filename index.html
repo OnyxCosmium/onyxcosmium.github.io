@@ -73,6 +73,18 @@
       <button id="backBtn" disabled>Back</button>
       <button id="nextBtn">Next</button>
     </div>
+
+    <div id="tooltip" style="
+      position: absolute;
+      visibility: hidden;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 5px;
+      font-size: 12px;
+      border-radius: 4px;
+      pointer-events: none;
+    ">
+    </div>
   </div>
 
   <script>
@@ -225,15 +237,31 @@
         .attr("text-anchor", "middle")
         .text("Confirmed Deaths per 100k");
 
+      const tooltip = d3.select("#tooltip");
+
       svg.selectAll("circle")
         .data(data)
         .enter()
         .append("circle")
-        .attr("cx", d => x(d.x))
-        .attr("cy", d => y(d.y))
+        .attr("cx", d => x(d.excess_mortality))
+        .attr("cy", d => y(d.confirmed_deaths))
         .attr("r", 4)
         .attr("fill", "steelblue")
-        .attr("opacity", 0.6);
+        .on("mouseover", function(event, d) {
+          tooltip
+            .style("visibility", "visible")
+            .text(d.location);
+          d3.select(this).attr("fill", "orange");
+        })
+        .on("mousemove", function(event) {
+          tooltip
+            .style("top", (event.pageY - 10) + "px")
+            .style("left", (event.pageX + 10) + "px");
+        })
+        .on("mouseout", function() {
+          tooltip.style("visibility", "hidden");
+          d3.select(this).attr("fill", "steelblue");
+        });
 
       svg.append("text")
         .attr("x", width / 2)
