@@ -118,12 +118,12 @@
 
       // SCENE 2: US Spotlight
       d3.csv("cleaned_us_excess_deaths.csv", d3.autoType).then(usData => {
-        const formatted = usData.map(d => ({
-          date: new Date(d.Day),
-          value: +d["Cumulative excess deaths per 100,000 people (central estimate)"]
-        }));
-        drawLineChart(formatted, "chart2", "United States: Excess Deaths per 100k");
-      });
+      const formattedData = usData.map(d => ({
+        date: new Date(d.Day),
+        value: +d["Cumulative excess deaths per 100,000 people (central estimate)"]
+      }));
+      drawLineChart(formattedData, "chart2", "United States: Excess Deaths Over Time");
+    });
 
       // SCENE 3: Select Country
       const countries = Array.from(new Set(data.map(d => d.location))).sort();
@@ -143,14 +143,14 @@
     });
 
     function drawLineChart(data, containerId, title) {
-      d3.select(`#${containerId}`).selectAll("svg").remove();
+      const container = d3.select(`#${containerId}`);
+      container.selectAll("*").remove(); // clear previous contents
 
-      const margin = { top: 30, right: 30, bottom: 50, left: 60 },
-            width = 800 - margin.left - margin.right,
-            height = 400 - margin.top - margin.bottom;
+      const margin = { top: 40, right: 30, bottom: 50, left: 60 };
+      const width = 800 - margin.left - margin.right;
+      const height = 400 - margin.top - margin.bottom;
 
-      const svg = d3.select(`#${containerId}`)
-        .append("svg")
+      const svg = container.append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
@@ -160,32 +160,65 @@
         .domain(d3.extent(data, d => d.date))
         .range([0, width]);
 
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.value)]).nice()
+        .range([height, 0]);
+
+      const line = d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.value));
+
+      // Axes
       svg.append("g")
         .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(x));
-
-      const y = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.value)])
-        .range([height, 0]);
+        .call(d3.axisBottom(x).ticks(6));
 
       svg.append("g")
         .call(d3.axisLeft(y));
 
+      // Line path
       svg.append("path")
         .datum(data)
         .attr("fill", "none")
         .attr("stroke", "steelblue")
         .attr("stroke-width", 2)
-        .attr("d", d3.line()
-          .x(d => x(d.date))
-          .y(d => y(d.value)));
+        .attr("d", line);
 
+      // Title
       svg.append("text")
         .attr("x", width / 2)
         .attr("y", -10)
         .attr("text-anchor", "middle")
-        .style("font-size", "16px")
+        .attr("font-size", "16px")
         .text(title);
+
+      // Tooltip (optional)
+      const tooltip = container.append("div")
+        .attr("class", "tooltip")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("padding", "8px")
+        .style("background", "rgba(0,0,0,0.7)")
+        .style("color", "#fff")
+        .style("border-radius", "4px");
+
+      svg.selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", d => x(d.date))
+        .attr("cy", d => y(d.value))
+        .attr("r", 3)
+        .attr("fill", "red")
+        .on("mouseover", (event, d) => {
+          tooltip.style("visibility", "visible")
+            .text(`${d3.timeFormat("%b %Y")(d.date)}: ${d.value.toFixed(1)} deaths`);
+        })
+        .on("mousemove", event => {
+          tooltip.style("top", (event.pageY - 40) + "px")
+                .style("left", (event.pageX + 10) + "px");
+        })
+        .on("mouseout", () => tooltip.style("visibility", "hidden"));
     }
 
     function drawScatterPlot(data, containerId, title) {
