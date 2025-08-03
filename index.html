@@ -52,9 +52,10 @@
     <h1>Excess Mortality During COVID-19</h1>
     <div id="scene-1" class="scene">
       <h2>Scene 1: Global Trend in Excess Deaths</h2>
-      <p>This chart shows a country's confirmed deaths by their excess death counts
-         due to COVID-19 per 100,000 people. The excess deaths account for the extra number of deaths that were
-         reported over the average death count that weren't the result of COVID.</p>
+      <p>Notice that a large group of countries reported low amounts of casualties
+         per 100k reported excess deaths. This is likely because resources that were
+         allocated for COVID patient couldn't be given to patients that would otherwise
+         be there with other illnesses and health complications.</p>
       <div class="chart" id="chart1"></div>
     </div>
 
@@ -116,9 +117,13 @@
       drawScatterPlot(scatterData, "chart1", "Excess Mortality vs Confirmed Deaths");
 
       // SCENE 2: US Spotlight
-      const usData = data.filter(d => d.location === "United States");
-      const usTimeSeries = usData.map(d => ({ date: d.date, value: d.excess_mortality }));
-      drawLineChart(usTimeSeries, "chart2", "United States: Excess Deaths per 100k");
+      d3.csv("cleaned_us_excess_deaths.csv", d3.autoType).then(usData => {
+        const formatted = usData.map(d => ({
+          date: new Date(d.Day),
+          value: +d["Cumulative excess deaths per 100,000 people (central estimate)"]
+        }));
+        drawLineChart(formatted, "chart2", "United States: Excess Deaths per 100k");
+      });
 
       // SCENE 3: Select Country
       const countries = Array.from(new Set(data.map(d => d.location))).sort();
