@@ -117,13 +117,9 @@
       drawScatterPlot(scatterData, "chart1", "Excess Mortality vs Confirmed Deaths");
 
       // SCENE 2: US Spotlight
-      d3.csv("cleaned_us_excess_deaths.csv", d3.autoType).then(usData => {
-      const formattedData = usData.map(d => ({
-        date: new Date(d.Day),
-        value: +d["Cumulative excess deaths per 100,000 people (central estimate)"]
-      }));
-      drawLineChart(formattedData, "chart2", "United States: Excess Deaths Over Time");
-    });
+      d3.csv("cleaned_us_excess_deaths.csv", d3.autoType).then(data => {
+        drawDualLineChart(data, "chart2", "US: Excess vs. Confirmed COVID-19 Deaths Over Time");
+      });
 
       // SCENE 3: Select Country
       const countries = Array.from(new Set(data.map(d => d.location))).sort();
@@ -219,6 +215,109 @@
                 .style("left", (event.pageX + 10) + "px");
         })
         .on("mouseout", () => tooltip.style("visibility", "hidden"));
+    }
+
+    function drawDualLineChart(data, containerId, title) {
+      const container = d3.select(`#${containerId}`);
+      container.selectAll("*").remove(); // Clear previous contents
+
+      const margin = { top: 40, right: 30, bottom: 50, left: 60 };
+      const width = 800 - margin.left - margin.right;
+      const height = 400 - margin.top - margin.bottom;
+
+      const svg = container.append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Parse date and convert numeric values
+      const formattedData = data.map(d => ({
+        date: new Date(d.Day),
+        excess: +d["Cumulative excess deaths per 100,000 people (central estimate)"],
+        confirmed: +d["Total confirmed deaths due to COVID-19 per 100,000 people"]
+      }));
+
+      // Scales
+      const x = d3.scaleTime()
+        .domain(d3.extent(formattedData, d => d.date))
+        .range([0, width]);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(formattedData, d => Math.max(d.excess, d.confirmed))]).nice()
+        .range([height, 0]);
+
+      // Axes
+      svg.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x).ticks(6));
+
+      svg.append("g")
+        .call(d3.axisLeft(y));
+
+      // Line generators
+      const lineExcess = d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.excess));
+
+      const lineConfirmed = d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.confirmed));
+
+      // Draw lines
+      svg.append("path")
+        .datum(formattedData)
+        .attr("fill", "none")
+        .attr("stroke", "red")
+        .attr("stroke-width", 2)
+        .attr("d", lineExcess);
+
+      svg.append("path")
+        .datum(formattedData)
+        .attr("fill", "none")
+        .attr("stroke", "blue")
+        .attr("stroke-width", 2)
+        .attr("d", lineConfirmed);
+
+      // Labels
+      svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", -10)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "16px")
+        .text(title);
+
+      // Legend
+      const legend = svg.append("g")
+        .attr("transform", `translate(${width - 150}, 10)`);
+
+      legend.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 10)
+        .attr("height", 10)
+        .attr("fill", "red");
+
+      legend.append("text")
+        .attr("x", 15)
+        .attr("y", 10)
+        .text("Excess Deaths")
+        .style("font-size", "12px")
+        .attr("alignment-baseline", "middle");
+
+      legend.append("rect")
+        .attr("x", 0)
+        .attr("y", 20)
+        .attr("width", 10)
+        .attr("height", 10)
+        .attr("fill", "blue");
+
+      legend.append("text")
+        .attr("x", 15)
+        .attr("y", 30)
+        .text("Confirmed Deaths")
+        .style("font-size", "12px")
+        .attr("alignment-baseline", "middle");
     }
 
     function drawScatterPlot(data, containerId, title) {
