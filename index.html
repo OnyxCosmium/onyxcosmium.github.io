@@ -70,19 +70,29 @@
     </div>
 
     <div class="button-container">
+      <button id="backBtn" disabled>Back</button>
       <button id="nextBtn">Next</button>
     </div>
   </div>
 
   <script>
     let sceneIndex = 1;
-    document.getElementById("nextBtn").addEventListener("click", () => {
-      sceneIndex++;
-      if (sceneIndex <= 3) {
-        document.getElementById(`scene-${sceneIndex - 1}`).style.display = "none";
-        document.getElementById(`scene-${sceneIndex}`).style.display = "block";
-      }
-    });
+
+    const maxScenes = 3;
+    const backBtn = document.getElementById("backBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    function updateScene(direction) {
+      document.getElementById(`scene-${sceneIndex}`).style.display = "none";
+      sceneIndex += direction;
+      document.getElementById(`scene-${sceneIndex}`).style.display = "block";
+
+      backBtn.disabled = sceneIndex === 1;
+      nextBtn.disabled = sceneIndex === maxScenes;
+    }
+
+    backBtn.addEventListener("click", () => updateScene(-1));
+    nextBtn.addEventListener("click", () => updateScene(1));
 
     d3.csv("cleaned_excess_deaths.csv").then(data => {
       console.log("Loaded data:", data);
