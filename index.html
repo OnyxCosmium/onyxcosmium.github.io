@@ -108,12 +108,12 @@
       const scatterData = data
         .filter(d => !isNaN(d.excess_mortality) && !isNaN(d.confirmed_deaths))
         .map(d => ({
-          x: +d.confirmed_deaths,
-          y: +d.excess_mortality,
+          x: +d.excess_mortality,
+          y: +d.confirmed_deaths,
           location: d.location,
           date: d.date
         }));
-      drawScatterPlot(scatterData, "chart1", "Confirmed Deaths vs Excess Mortality");
+      drawScatterPlot(scatterData, "chart1", "Excess Mortality vs Confirmed Deaths");
 
       // SCENE 2: US Spotlight
       const usData = data.filter(d => d.location === "United States");
