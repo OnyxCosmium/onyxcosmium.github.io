@@ -73,18 +73,6 @@
       <button id="backBtn" disabled>Back</button>
       <button id="nextBtn">Next</button>
     </div>
-
-    <div id="tooltip" style="
-      position: absolute;
-      visibility: hidden;
-      background: white;
-      border: 1px solid #ccc;
-      padding: 5px;
-      font-size: 12px;
-      border-radius: 4px;
-      pointer-events: none;
-    ">
-    </div>
   </div>
 
   <script>
@@ -106,21 +94,13 @@
     backBtn.addEventListener("click", () => updateScene(-1));
     nextBtn.addEventListener("click", () => updateScene(1));
 
-    d3.csv("cleaned_excess_deaths.csv", d => ({
-      location: d.location,
-      date: d.date,
-      excess_mortality: +d.excess_mortality,
-      confirmed_deaths: +d.confirmed_deaths,
-      ci_lower: +d.ci_lower,
-      ci_upper: +d.ci_upper
-    })).then(data => {
-      // filter out invalid points
-      data = data.filter(d =>
-        !isNaN(d.excess_mortality) &&
-        !isNaN(d.confirmed_deaths)
-      );
-
-      renderScene1(data);
+    d3.csv("cleaned_excess_deaths.csv").then(data => {
+      console.log("Loaded data:", data);
+      data.forEach(d => {
+        d.date = new Date(d.date);
+        d.excess_deaths = +d.excess_deaths;
+        d.excess_mortality = +d.excess_mortality;
+      });
 
       // SCENE 1: Global Median Excess Mortality
       const scatterData = data
@@ -245,31 +225,15 @@
         .attr("text-anchor", "middle")
         .text("Confirmed Deaths per 100k");
 
-      const tooltip = d3.select("#tooltip");
-
       svg.selectAll("circle")
         .data(data)
         .enter()
         .append("circle")
-        .attr("cx", d => x(d.excess_mortality))
-        .attr("cy", d => y(d.confirmed_deaths))
+        .attr("cx", d => x(d.x))
+        .attr("cy", d => y(d.y))
         .attr("r", 4)
         .attr("fill", "steelblue")
-        .on("mouseover", function(event, d) {
-          tooltip
-            .style("visibility", "visible")
-            .text(d.location);
-          d3.select(this).attr("fill", "orange");
-        })
-        .on("mousemove", function(event) {
-          tooltip
-            .style("top", (event.pageY - 10) + "px")
-            .style("left", (event.pageX + 10) + "px");
-        })
-        .on("mouseout", function() {
-          tooltip.style("visibility", "hidden");
-          d3.select(this).attr("fill", "steelblue");
-        });
+        .attr("opacity", 0.6);
 
       svg.append("text")
         .attr("x", width / 2)
