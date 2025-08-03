@@ -153,16 +153,22 @@
         });
 
         function updateScene3Chart(country) {
-          const countryData = scene3Data
-            .filter(d => d.location === country)
-            .map(d => ({
-              date: d.date,
-              excess_mortality: d.excess_mortality,
-              confirmed_deaths: d.confirmed_deaths
-            }));
+        const countryData = scene3Data
+          .filter(d =>
+            d.location === country &&
+            d.date instanceof Date &&
+            !isNaN(d.date) &&
+            !isNaN(d.excess_mortality) &&
+            !isNaN(d.confirmed_deaths)
+          )
+          .map(d => ({
+            date: d.date,
+            excess_mortality: d.excess_mortality,
+            confirmed_deaths: d.confirmed_deaths
+          }));
 
-          drawDualLineChart(countryData, "chart3", `${country}: Excess vs Confirmed Deaths Over Time`);
-        }
+        drawDualLineChart(countryData, "chart3", `${country}: Excess vs Confirmed Deaths Over Time`);
+      }
       });
     });
 
