@@ -125,129 +125,27 @@
       });
 
       // SCENE 3: Select Country
-      d3.csv("excess_deaths_data.csv", d3.autoType).then(fullData => {
-        // Clean to first entry per month per country
-        const grouped = d3.group(fullData, d => d.location);
-        const cleanedScene3 = [];
+      const countries = Array.from(new Set(data.map(d => d.location))).sort();
+      const select = d3.select("#countrySelect");
+      select.selectAll("option")
+        .data(countries)
+        .enter()
+        .append("option")
+        .text(d => d);
 
-        grouped.forEach((entries, country) => {
-          const byMonth = d3.group(entries, d => `${d.date.getFullYear()}-${d.date.getMonth()}`);
-          byMonth.forEach((records) => {
-            // Take the first entry for each month
-            const sorted = records.sort((a, b) => a.date - b.date);
-            cleanedScene3.push(sorted[0]);
-          });
-        });
+      select.on("change", function () {
+        const selected = this.value;
+        const countryData = data
+          .filter(d => d.location === selected)
+          .map(d => ({
+            date: new Date(d.date),
+            excess_mortality: +d.excess_mortality,
+            confirmed_deaths: +d.confirmed_deaths
+          }));
 
-        // Populate country dropdown
-        const countryList = Array.from(new Set(cleanedScene3.map(d => d.location))).sort();
-        const countrySelect = d3.select("#countrySelect");
-
-        countrySelect
-          .selectAll("option")
-          .data(countryList)
-          .enter()
-          .append("option")
-          .attr("value", d => d)
-          .text(d => d);
-
-        countrySelect.on("change", function () {
-          const selected = this.value;
-          const countryData = cleanedScene3
-            .filter(d => d.location === selected)
-            .map(d => ({
-              date: new Date(d.date),
-              excess_mortality: +d.excess_mortality,
-              confirmed_deaths: +d.confirmed_deaths
-            }));
-
-          drawDualLineChart(countryData, "chart3", `${selected}: Excess vs Confirmed Deaths Over Time`);
-        });
-
-        // Trigger initial graph
-        const defaultCountry = "United States";
-        countrySelect.property("value", defaultCountry).dispatch("change");
+        drawDualLineChart(countryData, "chart3", `${selected}: Excess vs Confirmed Deaths Over Time`);
       });
     });
-
-    function drawLineChart(data, containerId, title) {
-      const container = d3.select(`#${containerId}`);
-      container.selectAll("*").remove(); // clear previous contents
-
-      const margin = { top: 40, right: 30, bottom: 50, left: 60 };
-      const width = 800 - margin.left - margin.right;
-      const height = 400 - margin.top - margin.bottom;
-
-      const svg = container.append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
-
-      const x = d3.scaleTime()
-        .domain(d3.extent(data, d => d.date))
-        .range([0, width]);
-
-      const y = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.value)]).nice()
-        .range([height, 0]);
-
-      const line = d3.line()
-        .x(d => x(d.date))
-        .y(d => y(d.value));
-
-      // Axes
-      svg.append("g")
-        .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(x).ticks(6));
-
-      svg.append("g")
-        .call(d3.axisLeft(y));
-
-      // Line path
-      svg.append("path")
-        .datum(data)
-        .attr("fill", "none")
-        .attr("stroke", "steelblue")
-        .attr("stroke-width", 2)
-        .attr("d", line);
-
-      // Title
-      svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", -10)
-        .attr("text-anchor", "middle")
-        .attr("font-size", "16px")
-        .text(title);
-
-      // Tooltip (optional)
-      const tooltip = container.append("div")
-        .attr("class", "tooltip")
-        .style("position", "absolute")
-        .style("visibility", "hidden")
-        .style("padding", "8px")
-        .style("background", "rgba(0,0,0,0.7)")
-        .style("color", "#fff")
-        .style("border-radius", "4px");
-
-      svg.selectAll("circle")
-        .data(data)
-        .enter()
-        .append("circle")
-        .attr("cx", d => x(d.date))
-        .attr("cy", d => y(d.value))
-        .attr("r", 3)
-        .attr("fill", "red")
-        .on("mouseover", (event, d) => {
-          tooltip.style("visibility", "visible")
-            .text(`${d3.timeFormat("%b %Y")(d.date)}: ${d.value.toFixed(1)} deaths`);
-        })
-        .on("mousemove", event => {
-          tooltip.style("top", (event.pageY - 40) + "px")
-                .style("left", (event.pageX + 10) + "px");
-        })
-        .on("mouseout", () => tooltip.style("visibility", "hidden"));
-    }
 
     function drawDualLineChart(data, containerId, title) {
       const container = d3.select(`#${containerId}`);
