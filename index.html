@@ -52,7 +52,9 @@
     <h1>Excess Mortality During COVID-19</h1>
     <div id="scene-1" class="scene">
       <h2>Scene 1: Global Trend in Excess Deaths</h2>
-      <p>This chart shows the global median of excess deaths per 100,000 people over time.</p>
+      <p>This chart shows a country's confirmed deaths by their excess death counts
+         due to COVID-19 per 100,000 people. The excess deaths account for the extra number of deaths that were
+         reported over the average death count that weren't the result of COVID.</p>
       <div class="chart" id="chart1"></div>
     </div>
 
@@ -106,12 +108,12 @@
       const scatterData = data
         .filter(d => !isNaN(d.excess_mortality) && !isNaN(d.confirmed_deaths))
         .map(d => ({
-          x: +d.excess_mortality,
-          y: +d.confirmed_deaths,
+          x: +d.confirmed_deaths,
+          y: +d.excess_mortality,
           location: d.location,
           date: d.date
         }));
-      drawScatterPlot(scatterData, "chart1", "Excess Mortality vs Confirmed Deaths");
+      drawScatterPlot(scatterData, "chart1", "Confirmed Deaths vs Excess Mortality");
 
       // SCENE 2: US Spotlight
       const usData = data.filter(d => d.location === "United States");
