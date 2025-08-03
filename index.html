@@ -125,25 +125,44 @@
       });
 
       // SCENE 3: Select Country
-      const countries = Array.from(new Set(data.map(d => d.location))).sort();
-      const select = d3.select("#countrySelect");
-      select.selectAll("option")
-        .data(countries)
-        .enter()
-        .append("option")
-        .text(d => d);
+      d3.csv("cleaned_excess_mortality_data.csv", d3.autoType).then(scene3Data => {
+        // Convert date and numeric fields
+        scene3Data.forEach(d => {
+          d.date = new Date(d.date);
+          d.excess_mortality = +d.excess_mortality;
+          d.confirmed_deaths = +d.confirmed_deaths;
+        });
 
-      select.on("change", function () {
-        const selected = this.value;
-        const countryData = data
-          .filter(d => d.location === selected)
-          .map(d => ({
-            date: new Date(d.date),
-            excess_mortality: +d.excess_mortality,
-            confirmed_deaths: +d.confirmed_deaths
-          }));
+        // Populate country dropdown
+        const countries = Array.from(new Set(scene3Data.map(d => d.location))).sort();
+        const select = d3.select("#countrySelect");
+        select.selectAll("option")
+          .data(countries)
+          .enter()
+          .append("option")
+          .text(d => d);
 
-        drawDualLineChart(countryData, "chart3", `${selected}: Excess vs Confirmed Deaths Over Time`);
+        // Initial draw (optional: set default country)
+        const defaultCountry = countries.includes("United States") ? "United States" : countries[0];
+        select.property("value", defaultCountry);
+        updateScene3Chart(defaultCountry);
+
+        // Update chart on dropdown change
+        select.on("change", function () {
+          updateScene3Chart(this.value);
+        });
+
+        function updateScene3Chart(country) {
+          const countryData = scene3Data
+            .filter(d => d.location === country)
+            .map(d => ({
+              date: d.date,
+              excess_mortality: d.excess_mortality,
+              confirmed_deaths: d.confirmed_deaths
+            }));
+
+          drawDualLineChart(countryData, "chart3", `${country}: Excess vs Confirmed Deaths Over Time`);
+        }
       });
     });
 
